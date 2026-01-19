@@ -1,45 +1,50 @@
 import os
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    ContextTypes,
+    filters,
+)
 
+# نجيب التوكن من Environment
 TOKEN = os.getenv("BOT_TOKEN")
 
-users = {}
+if not TOKEN:
+    raise ValueError("BOT_TOKEN not found in environment variables")
 
+# /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [["دكتور", "صيدلية"]]
+    keyboard = [
+        ["دكتور", "صيدلية"],
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     await update.message.reply_text(
-        "اختار نوع الزيارة:",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=True)
+        "مرحبا 👋\nاختار نوع الزيارة:",
+        reply_markup=reply_markup,
     )
 
-async def handle_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    users[update.effective_user.id] = {"type": update.message.text}
-    await update.message.reply_text("اكتب الاسم:")
+# استقبال الرسائل
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
 
-async def handle_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = users.get(update.effective_user.id)
-    if user and "name" not in user:
-        user["name"] = update.message.text
-        await update.message.reply_text("اكتب الملاحظة:")
-
-async def handle_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = users.get(update.effective_user.id)
-    if user and "note" not in user:
-        user["note"] = update.message.text
+    if text == "دكتور":
+        await update.message.reply_text("اكتب اسم الدكتور:")
+    elif text == "صيدلية":
+        await update.message.reply_text("اكتب اسم الصيدلية:")
+    else:
         await update.message.reply_text(
-            f"✅ تم تسجيل الزيارة\n"
-            f"النوع: {user['type']}\n"
-            f"الاسم: {user['name']}\n"
-            f"الملاحظة: {user['note']}"
+            f"تم تسجيل:\n{text}\n\n(توّة هذا مثال، وبنطوّروه بعد)"
         )
-        users.pop(update.effective_user.id)
 
-app = ApplicationBuilder().token(TOKEN).build()
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
 
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.Regex("^(دكتور|صيدلية)$"), handle_type))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_name))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_note))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-app.run_polling()
+    app.run_polling(close_loop=False)
+
+if __name__ == "__main__":
+    main()
